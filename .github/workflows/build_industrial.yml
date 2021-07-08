@@ -4,34 +4,33 @@ name: Build Test (not for release)
 on:
   # Triggers the workflow on push or pull request events
   push:
-    branches: [ master ]
+    branches: [ foxy ]
   pull_request:
-    branches: [ master ]
+    branches: [ foxy ]
 
 # Jobs that should be run
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        env:
-          # Test against current release and testing repo  
-          - {ROS_DISTRO: noetic, ROS_REPO: main}
-          - {ROS_DISTRO: noetic, ROS_REPO: testing}
-    env:
-      CCACHE_DIR: /github/home/.ccache # Directory for ccache (industrial_ci)
-
-    # Steps representing the build job
-    steps:   
-      - uses: actions/checkout@v2 
-          
-      # This step will fetch/store the directory used by ccache before/after the ci run
-      - uses: actions/cache@v2
-        with:
-          path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ matrix.env.ROS_DISTRO }}-${{ matrix.env.ROS_REPO }}
-      
-      # Run industrial_ci (building the package)
-      - uses: 'ros-industrial/industrial_ci@master'
-        env: ${{ matrix.env }}
-      
+        os: [ubuntu-20.04]
+        linter: [clang_tidy, cppcheck, cpplint, uncrustify, xmllint]
+      fail-fast: false
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup ROS 2
+      uses: ros-tooling/setup-ros@v0.2
+      with:
+        required-ros-distributions: foxy
+    - name: CI
+      uses: ros-tooling/action-ros-ci@v0.2
+      with:
+        package-name: ueye_cam
+        target-ros2-distro: foxy
+    - name: Linter
+      uses: ros-tooling/action-ros2-lint@0.0.6
+      with:
+        linter: ${{ matrix.linter }}
+        package-name: ueye_cam
